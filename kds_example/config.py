@@ -11,9 +11,6 @@ class Config:
 
     @property
     def chalice_app_name(self):
-        return self.project_name
+        return self.project_name_slug
 
 config = Config()
-
-if __name__ == "__main__":
-    print(config.project_name_slug)

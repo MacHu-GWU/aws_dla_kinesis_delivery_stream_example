@@ -8,5 +8,5 @@ env = cft.Env(boto_ses=boto_ses)
 
 env.deploy(
     template=tpl,
-    stack_name=f"cottonformation-deps-{aws_account_id}-{aws_region}",
+    stack_name=f"artifacts-{aws_account_id}-{aws_region}",
 )

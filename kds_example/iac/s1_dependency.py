@@ -16,7 +16,7 @@ from ..config import config
 
 tpl = cft.Template()
 
-artifacts_s3_bucket_name = f"{aws_account_id}-{aws_region}-cottonformation"
+artifacts_s3_bucket_name = f"{aws_account_id}-{aws_region}-artifacts"
 s3_bucket_for_artifacts = s3.Bucket(
     "S3BucketForCottonFormation",
     p_BucketName=artifacts_s3_bucket_name,

@@ -9,6 +9,13 @@ AWS Kinesis Delivery Stream Examples
     :local:
 
 
+What is this Project
+------------------------------------------------------------------------------
+**这个 GitHub repo 的目的是能让开发者能快速实验 Kinesis Data Stream + Delivery Stream 的功能, 将其快速的部署到任何 AWS Account, 快速测试任何 Destination Integration.**
+
+这个项目主要是提供了一套 CloudFormation Template, AWS Lambda for Transformation 的组合, 能一键生成所需资源, 并专注于实验系统功能.
+
+
 Destination
 ------------------------------------------------------------------------------
 

@@ -13,6 +13,9 @@ tpl.add(stack.rg1_data_bucket)
 tpl.add(stack.rg2_iam_permission)
 tpl.add(stack.rg3_opensearch)
 tpl.add(stack.rg4_kinesis_data_stream)
+
+# pause here, make sure you already have lambda function deployed using
+# bin/12-lbd-deploy.sh shell script
 tpl.add(stack.rg5_kinesis_delivery_stream_to_s3)
 tpl.add(stack.rg6_kinesis_delivery_stream_to_oss)
 
