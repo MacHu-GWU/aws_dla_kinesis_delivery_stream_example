@@ -1,0 +1,11 @@
+# put dependencies you need directly import in requirements-ground-truth.txt
+# put ``pip freeze`` command output in requirements.txt for a fixed version
+# immutable deploy
+boto3
+attrs
+pynamodb
+boto3
+typing_extensions
+attrs
+pynamodb
+chalice

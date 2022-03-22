@@ -1,0 +1,3 @@
+# chalice deployments temp build files
+.chalice/deployments/
+vendor/

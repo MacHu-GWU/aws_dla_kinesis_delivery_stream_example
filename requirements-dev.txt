@@ -1,0 +1,6 @@
+rich==12.0.0                        # colorful print
+cottonformation==0.0.5              # infrastructure as code
+opensearch-py                       # official opensearch Python client
+requests_aws4auth                   # authentication for AWS Opensearch
+mpire
+Faker
