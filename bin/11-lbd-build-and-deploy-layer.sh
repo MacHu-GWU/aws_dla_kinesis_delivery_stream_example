@@ -6,10 +6,9 @@ dir_project_root="$(dirname "${dir_here}")"
 dir_venv_bin="${dir_project_root}/venv/bin"
 
 #---- change these config variables accordingly ---
-app_name="kds-example"
-compatible_runtime="python3.8"
-
 set -e
+compatible_runtime="python3.8"
+app_name="$(${dir_venv_bin}/python "${dir_here}/bash_python_integration/print_chalice_app_name.py")"
 lbd_deploy_bucket="$(${dir_venv_bin}/python "${dir_here}/bash_python_integration/print_s3_bucket_for_artifacts.py")"
 aws_region="$(${dir_venv_bin}/python "${dir_here}/bash_python_integration/print_aws_region.py")"
 set +e
