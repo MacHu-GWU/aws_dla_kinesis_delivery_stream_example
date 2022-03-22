@@ -13,7 +13,7 @@ def delivery_stream_tranformation_handler(
         # convert the data back to raw record
         raw_record = json.loads(
             base64.b64decode(
-                record["data"].decode("utf-8")
+                record["data"].encode("utf-8")
             )
         )
 

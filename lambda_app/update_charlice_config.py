@@ -9,11 +9,11 @@ from kds_example.iac.s2_app import stack
 
 chalice_config = {
     "version": "2.0",
-    "app_name": kds_example.__chalice_app_name__,
+    "app_name": config.chalice_app_name,
     "stages": {
         "dev": {
             "lambda_memory_size": 512,
-            "lambda_timeout": 30,
+            "lambda_timeout": 120, # it has to longer than 60 seconds, the minimal kinesis buffer hint time
             "manage_iam_role": False,
             "iam_role_arn": f"arn:aws:iam::{aws_account_id}:role/{stack.iam_role_name_for_lbd}",
             "layers": [

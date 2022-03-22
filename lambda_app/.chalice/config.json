@@ -4,7 +4,7 @@
     "stages": {
         "dev": {
             "lambda_memory_size": 512,
-            "lambda_timeout": 30,
+            "lambda_timeout": 120,
             "manage_iam_role": false,
             "iam_role_arn": "arn:aws:iam::669508176277:role/kds-example-for-lambda",
             "layers": [

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+This is the Kinesis data stream application stack.
+
 Prerequisite:
 
 1. An AWS Account with default VPC
@@ -29,10 +31,9 @@ from typing import List
 import attr
 import cottonformation as cft
 from cottonformation.res import (
-    s3, iam, opensearchservice, kinesis, kinesisfirehose,
+    s3, iam, opensearchservice, kinesis, kinesisfirehose, awslambda,
 )
 
-from .._chalice_app_name import __chalice_app_name__
 from ..config import config
 from ..boto_ses import aws_account_id, aws_region
 
@@ -40,6 +41,7 @@ from ..boto_ses import aws_account_id, aws_region
 @attr.s
 class Stack(cft.Stack):
     project_name: str = attr.ib()
+    stage: str = attr.ib()
     aws_account_id: str = attr.ib()
     aws_region: str = attr.ib()
     oss_index_name: str = attr.ib(default="bank_account")
@@ -51,6 +53,10 @@ class Stack(cft.Stack):
     @property
     def stack_name(self) -> str:
         return self.project_name_slug
+
+    @property
+    def chalice_app_name(self):
+        return self.project_name.replace("-", "_")
 
     @property
     def s3_data_bucket_name(self) -> str:
@@ -66,11 +72,11 @@ class Stack(cft.Stack):
 
     @property
     def lbd_func_name_transformation_for_s3(self) -> str:
-        return f"{self.project_name_slug}-to-s3"
+        return f"{self.chalice_app_name}-{self.stage}-to_s3"
 
     @property
     def lbd_func_name_transformation_for_oss(self) -> str:
-        return f"{self.project_name_slug}-to-oss"
+        return f"{self.chalice_app_name}-{self.stage}-to_oss"
 
     @property
     def all_lbd_func_name(self) -> List[str]:
@@ -144,18 +150,6 @@ class Stack(cft.Stack):
                     "Resource": [
                         f"arn:aws:s3:::{self.s3_data_bucket_name}",
                         f"arn:aws:s3:::{self.s3_data_bucket_name}/*"
-                    ]
-                },
-                {
-                    "Sid": "",
-                    "Effect": "Allow",
-                    "Action": [
-                        "lambda:InvokeFunction",
-                        "lambda:GetFunctionConfiguration"
-                    ],
-                    "Resource": [
-                        f"arn:aws:lambda:{self.aws_region}:{self.aws_account_id}:function:{name}:$LATEST"
-                        for name in self.all_lbd_func_name
                     ]
                 },
                 {
@@ -268,6 +262,17 @@ class Stack(cft.Stack):
                 }
             ]
         }
+        for name in self.all_lbd_func_name:
+            policy_document["Statement"].append({
+                "Sid": "",
+                "Effect": "Allow",
+                "Action": [
+                    "lambda:InvokeFunction",
+                    "lambda:GetFunctionConfiguration"
+                ],
+                "Resource": f"arn:aws:lambda:{self.aws_region}:{self.aws_account_id}:function:{name}:$LATEST"
+            })
+
         self.iam_policy_for_firehose = iam.ManagedPolicy(
             "IamPolicyForKinesisDeliveryStream",
             p_ManagedPolicyName=f"{self.project_name}-for-firehose",
@@ -282,7 +287,8 @@ class Stack(cft.Stack):
             ).build(),
             p_RoleName=self.iam_role_name_for_firehose,
             p_ManagedPolicyArns=[
-                self.iam_policy_for_firehose.ref()
+                self.iam_policy_for_firehose.ref(),
+                "arn:aws:iam::aws:policy/AWSLambda_FullAccess",
             ],
         )
         self.rg2_iam_permission.add(self.iam_role_for_firehose)
@@ -315,7 +321,10 @@ class Stack(cft.Stack):
                     {
                         "Effect": "Allow",
                         "Principal": {
-                            "AWS": f"arn:aws:iam::{self.aws_account_id}:user/sanhe"
+                            "AWS": [
+                                f"arn:aws:iam::{self.aws_account_id}:user/sanhe",
+                                self.iam_role_for_firehose.rv_Arn,
+                            ]
                         },
                         "Action": "es:*",
                         "Resource": f"arn:aws:es:{self.aws_region}:{self.aws_account_id}:domain/{self.oss_domain_name}/*"
@@ -372,12 +381,17 @@ class Stack(cft.Stack):
                     p_IntervalInSeconds=60,
                     p_SizeInMBs=5,
                 ),
+                p_CloudWatchLoggingOptions=kinesisfirehose.PropDeliveryStreamCloudWatchLoggingOptions(
+                    p_Enabled=True,
+                    p_LogGroupName=f"/aws/kinesis/firehose/{self.kinesis_delivery_stream_name_for_s3}",
+                    p_LogStreamName="BackupDelivery",
+                ),
                 p_S3BackupMode="Enabled",
                 p_S3BackupConfiguration=kinesisfirehose.PropDeliveryStreamS3DestinationConfiguration(
                     rp_BucketARN=self.s3_data_bucket.rv_Arn,
                     rp_RoleARN=self.iam_role_for_firehose.rv_Arn,
                     p_Prefix="to-s3/01-backup/",
-                    p_ErrorOutputPrefix="to-s3/01-backup-failed/",
+                    p_ErrorOutputPrefix="to-s3/02-backup-failed/",
                     p_BufferingHints=kinesisfirehose.PropDeliveryStreamBufferingHints(
                         p_IntervalInSeconds=60,
                         p_SizeInMBs=5,
@@ -391,7 +405,7 @@ class Stack(cft.Stack):
                             p_Parameters=[
                                 kinesisfirehose.PropDeliveryStreamProcessorParameter(
                                     rp_ParameterName="LambdaArn",
-                                    rp_ParameterValue=f"arn:aws:lambda:{aws_region}:{aws_account_id}:function:{__chalice_app_name__}-dev-to_s3",
+                                    rp_ParameterValue=f"arn:aws:lambda:{aws_region}:{aws_account_id}:function:{self.lbd_func_name_transformation_for_s3}",
                                 ),
                                 kinesisfirehose.PropDeliveryStreamProcessorParameter(
                                     rp_ParameterName="NumberOfRetries",
@@ -421,6 +435,15 @@ class Stack(cft.Stack):
         )
         self.rg5_kinesis_delivery_stream_to_s3.add(self.kinesis_delivery_stream_to_s3)
 
+        self.delivery_stream_to_s3_lbd_permission = awslambda.Permission(
+            "DeliveryStreamToS3LbdPermission",
+            rp_Action="lambda:InvokeFunction",
+            rp_FunctionName=f"arn:aws:lambda:{aws_region}:{aws_account_id}:function:{self.lbd_func_name_transformation_for_s3}",
+            rp_Principal="firehose.amazonaws.com",
+            p_SourceArn=self.kinesis_delivery_stream_to_s3.rv_Arn,
+        )
+        self.rg5_kinesis_delivery_stream_to_s3.add(self.delivery_stream_to_s3_lbd_permission)
+
     def mk_rg6_kinesis_delivery_stream_to_oss(self):
         self.rg6_kinesis_delivery_stream_to_oss = cft.ResourceGroup("RG6")
 
@@ -444,12 +467,17 @@ class Stack(cft.Stack):
                     p_IntervalInSeconds=60,
                     p_SizeInMBs=5,
                 ),
+                p_CloudWatchLoggingOptions=kinesisfirehose.PropDeliveryStreamCloudWatchLoggingOptions(
+                    p_Enabled=True,
+                    p_LogGroupName=f"/aws/kinesis/firehose/{self.kinesis_delivery_stream_name_for_oss}",
+                    p_LogStreamName="BackupDelivery",
+                ),
                 p_S3BackupMode="AllDocuments",
                 rp_S3Configuration=kinesisfirehose.PropDeliveryStreamS3DestinationConfiguration(
                     rp_BucketARN=self.s3_data_bucket.rv_Arn,
                     rp_RoleARN=self.iam_role_for_firehose.rv_Arn,
                     p_Prefix="to-oss/01-backup/",
-                    p_ErrorOutputPrefix="to-oss/01-backup-failed/",
+                    p_ErrorOutputPrefix="to-oss/02-backup-failed/",
                     p_BufferingHints=kinesisfirehose.PropDeliveryStreamBufferingHints(
                         p_IntervalInSeconds=60,
                         p_SizeInMBs=5,
@@ -463,7 +491,7 @@ class Stack(cft.Stack):
                             p_Parameters=[
                                 kinesisfirehose.PropDeliveryStreamProcessorParameter(
                                     rp_ParameterName="LambdaArn",
-                                    rp_ParameterValue=f"arn:aws:lambda:{aws_region}:{aws_account_id}:function:{__chalice_app_name__}-dev-to_oss",
+                                    rp_ParameterValue=f"arn:aws:lambda:{aws_region}:{aws_account_id}:function:{self.lbd_func_name_transformation_for_oss}",
                                 ),
                                 kinesisfirehose.PropDeliveryStreamProcessorParameter(
                                     rp_ParameterName="NumberOfRetries",
@@ -493,6 +521,15 @@ class Stack(cft.Stack):
         )
         self.rg6_kinesis_delivery_stream_to_oss.add(self.kinesis_delivery_stream_to_oss)
 
+        self.delivery_stream_to_oss_lbd_permission = awslambda.Permission(
+            "DeliveryStreamToOSSLbdPermission",
+            rp_Action="lambda:InvokeFunction",
+            rp_FunctionName=f"arn:aws:lambda:{aws_region}:{aws_account_id}:function:{self.lbd_func_name_transformation_for_oss}",
+            rp_Principal="firehose.amazonaws.com",
+            p_SourceArn=self.kinesis_delivery_stream_to_oss.rv_Arn,
+        )
+        self.rg6_kinesis_delivery_stream_to_oss.add(self.delivery_stream_to_oss_lbd_permission)
+
     def post_hook(self):
         self.mk_rg1_data_bucket()
         self.mk_rg2_iam_permission()
@@ -504,6 +541,7 @@ class Stack(cft.Stack):
 
 stack = Stack(
     project_name=config.project_name_slug,
+    stage=config.stage,
     aws_account_id=aws_account_id,
     aws_region=aws_region,
     oss_index_name=config.oss_index_name,

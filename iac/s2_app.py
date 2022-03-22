@@ -16,7 +16,7 @@ tpl.add(stack.rg4_kinesis_data_stream)
 tpl.add(stack.rg5_kinesis_delivery_stream_to_s3)
 tpl.add(stack.rg6_kinesis_delivery_stream_to_oss)
 
-tpl.batch_tagging(ProjectName=stack.project_name)
+tpl.batch_tagging(ProjectName=stack.project_name, Debug="1")
 
 # deploy stack
 env = cft.Env(boto_ses=boto_ses)

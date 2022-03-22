@@ -1,6 +1,10 @@
 rich==12.0.0                        # colorful print
 cottonformation==0.0.5              # infrastructure as code
+smart_open==5.2.1                   # io tool
+s3pathlib==1.0.5                    # s3 manipulation
 opensearch-py                       # official opensearch Python client
 requests_aws4auth                   # authentication for AWS Opensearch
 mpire
 Faker
+pandas
+prettytable
