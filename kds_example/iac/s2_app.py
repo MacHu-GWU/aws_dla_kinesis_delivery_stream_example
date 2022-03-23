@@ -336,8 +336,8 @@ def create_delivery_stream_with_s3_destination(
                 p_Prefix=backup_s3_prefix_success,
                 p_ErrorOutputPrefix=backup_s3_prefix_failed,
                 p_BufferingHints=kinesisfirehose.PropDeliveryStreamBufferingHints(
-                    p_SizeInMBs=s3_backup_buffer_hint_interval_in_sec,
-                    p_IntervalInSeconds=s3_backup_buffer_hint_size_in_mb,
+                    p_IntervalInSeconds=s3_backup_buffer_hint_interval_in_sec,
+                    p_SizeInMBs=s3_backup_buffer_hint_size_in_mb,
                 ),
             ),
             p_ProcessingConfiguration=kinesisfirehose.PropDeliveryStreamProcessingConfiguration(
