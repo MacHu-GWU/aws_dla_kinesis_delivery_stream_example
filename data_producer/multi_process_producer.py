@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import os
+"""
+This script use multiple CPU core to simulate many data producers for load test.
+"""
+
 import time
 import json
-import random
-import boto3
 import uuid
 from datetime import datetime
 from mpire import WorkerPool
@@ -19,6 +20,7 @@ stream_name = stack.kinesis_data_stream_name
 n_records_per_api = 100  # must <= 500
 
 api_invoke_count = list()
+st = datetime.now()
 
 
 def run_producer(api_invoke_count: list, producer_id: int):
@@ -47,9 +49,14 @@ def run_producer(api_invoke_count: list, producer_id: int):
             Records=kin_records,
             StreamName=stream_name,
         )
+
         api_invoke_count.append(1)
         n_sent += n_records_per_api
-        print(f"this is producer: {producer_id}, has sent {n_sent} records")
+        et = datetime.now()
+        elapse = (et - st).total_seconds()
+        total_n_sent = len(api_invoke_count) * n_records_per_api
+        tps = int(total_n_sent / elapse)
+        print(f"this is producer: {producer_id}, has sent {n_sent} records. all producer has sent {total_n_sent} records. tps = {tps} records / sec")
 
 
 if __name__ == "__main__":

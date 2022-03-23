@@ -16,6 +16,11 @@ What is this Project
 这个项目主要是提供了一套 CloudFormation Template, AWS Lambda for Transformation 的组合, 能一键生成所需资源, 并专注于实验系统功能.
 
 
+How to Deploy this Example
+------------------------------------------------------------------------------
+1. `Run iac/s1_dependency.py <./iac/s1_dependency.py>`_
+
+
 Destination
 ------------------------------------------------------------------------------
 
